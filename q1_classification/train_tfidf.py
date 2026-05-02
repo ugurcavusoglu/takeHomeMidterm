@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from preprocess import load_imdb
-from evaluate import compute_metrics, analyze_misclassifications
+from metrics import compute_metrics, analyze_misclassifications
 from config import SEED, RESULTS_DIR
 
 random.seed(SEED)

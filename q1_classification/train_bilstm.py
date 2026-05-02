@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from preprocess import load_imdb, build_vocab, load_glove, texts_to_sequences
-from evaluate import compute_metrics, analyze_misclassifications
+from metrics import compute_metrics, analyze_misclassifications
 from config import (
     SEED, MAX_LEN, BATCH_SIZE, EPOCHS_BILSTM, LR_BILSTM,
     PATIENCE, CHECKPOINT_DIR, RESULTS_DIR, GLOVE_DIM, MAX_VOCAB,

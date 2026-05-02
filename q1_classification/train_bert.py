@@ -9,8 +9,8 @@ from transformers import (
     TrainingArguments,
     EarlyStoppingCallback,
 )
-import evaluate as hf_evaluate
-from evaluate import compute_metrics as local_compute_metrics, analyze_misclassifications
+import evaluate as hf_evaluate_lib
+from metrics import compute_metrics as local_compute_metrics, analyze_misclassifications
 from config import (
     SEED, MAX_LEN, BATCH_SIZE, EPOCHS_BERT, LR_BERT,
     CHECKPOINT_DIR, RESULTS_DIR, DATASET_NAME,
@@ -21,8 +21,8 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 
 MODEL_NAME = "distilbert-base-uncased"
-accuracy_metric = hf_evaluate.load("accuracy")
-f1_metric = hf_evaluate.load("f1")
+accuracy_metric = hf_evaluate_lib.load("accuracy")
+f1_metric = hf_evaluate_lib.load("f1")
 
 
 def tokenize(batch: dict, tokenizer: AutoTokenizer) -> dict:
