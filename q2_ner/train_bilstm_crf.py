@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from torchcrf import CRF
+from torchcrf import CRF  # pip install pytorch-crf
 from tqdm import tqdm
 from preprocess import load_conll, build_word_vocab, build_tag_vocab, load_glove, encode_sequences
 from metrics import compute_ner_metrics, ids_to_tags, analyze_ner_errors

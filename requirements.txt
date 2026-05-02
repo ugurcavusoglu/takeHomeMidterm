@@ -17,7 +17,7 @@ scipy==1.13.0
 # NLP utilities
 nltk==3.8.1
 spacy==3.7.4
-torchcrf==1.1.0
+pytorch-crf==0.7.2
 seqeval==1.2.2
 
 # Summarization / Translation metrics
