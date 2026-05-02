@@ -1,0 +1,176 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{natbib}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{
+    \textbf{CENG 467 -- Natural Language Understanding and Generation} \\
+    \large Take-Home Midterm Examination Report
+}
+\author{Uğur Mert Çavuşoğlu \\ Student ID: \texttt{300201087}}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% -------------------------------------------------------
+\section{Introduction}
+
+This report presents the experimental results and analysis for the CENG 467 Take-Home Midterm. Five NLP tasks are addressed: text classification, named entity recognition, text summarization, machine translation, and language modeling. For each task, multiple modeling approaches are implemented and compared under consistent experimental conditions.
+
+All experiments were conducted on Google Colab with a T4 GPU. Code is fully reproducible and available at:
+\begin{center}
+\url{https://github.com/ugurcavusoglu/takeHomeMidterm}
+\end{center}
+
+Random seed 42 is used throughout all experiments. Dataset splits and preprocessing pipelines are kept consistent across models within each question. The test set is used only once for final evaluation.
+
+% -------------------------------------------------------
+\section{Question 1: Representation Learning in Text Classification}
+
+\subsection{Dataset}
+
+The IMDb sentiment analysis dataset~\citep{maas2011imdb} consists of 50{,}000 movie reviews evenly split into 25{,}000 training and 25{,}000 test samples, with balanced positive and negative labels. From the training set, 10\% (2{,}500 samples) is held out as a validation set, leaving 22{,}500 samples for training.
+
+\subsection{Preprocessing and Tokenization}
+
+Two tokenization strategies are compared:
+
+\begin{enumerate}
+    \item \textbf{Whitespace tokenization with normalization}: HTML tags are stripped, text is lowercased, punctuation is removed, and tokens are split on whitespace. A vocabulary of 30{,}000 most frequent tokens is built from the training set. Out-of-vocabulary tokens are mapped to \texttt{<UNK>}. This strategy is used for the TF-IDF and BiLSTM models.
+
+    \item \textbf{WordPiece subword tokenization}: The DistilBERT tokenizer splits rare words into subword units, handling morphological variations and out-of-vocabulary words without an explicit UNK mapping. Maximum sequence length is set to 256 tokens, matching the truncation applied to other models for fair comparison.
+\end{enumerate}
+
+Key differences are summarized in Table~\ref{tab:tokenization}.
+
+\begin{table}[H]
+\centering
+\caption{Tokenization strategy comparison.}
+\label{tab:tokenization}
+\begin{tabular}{llll}
+\toprule
+\textbf{Strategy} & \textbf{Vocab Size} & \textbf{OOV Handling} & \textbf{Used By} \\
+\midrule
+Whitespace + normalization & 30{,}000 & \texttt{<UNK>} token & TF-IDF, BiLSTM \\
+WordPiece (subword) & 30{,}522 & Subword split & DistilBERT \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Preprocessing decisions such as stopword removal were deliberately omitted for the TF-IDF model, as negation words (e.g., \textit{not}, \textit{never}) carry strong sentiment signal. Truncation to 256 tokens affects BiLSTM more than TF-IDF, since TF-IDF operates on the full bag-of-words representation.
+
+\subsection{Models}
+
+\textbf{TF-IDF + Logistic Regression}: A \texttt{TfidfVectorizer} with unigrams and bigrams (\texttt{ngram\_range=(1,2)}), 50{,}000 maximum features, and sublinear TF scaling is paired with Logistic Regression (\texttt{C=1.0}, \texttt{max\_iter=1000}).
+
+\textbf{BiLSTM + GloVe}: A bidirectional LSTM with hidden size 128 is initialized with 100-dimensional GloVe embeddings~\citep{pennington2014glove} (29{,}397 of 30{,}000 vocabulary tokens found). Dropout of 0.3 is applied before the classification head. Training uses Adam with learning rate $10^{-3}$, batch size 32, and early stopping with patience 2.
+
+\textbf{DistilBERT}: \texttt{distilbert-base-uncased}~\citep{sanh2019distilbert} is fine-tuned for sequence classification using the HuggingFace \texttt{Trainer} API. Training uses AdamW with learning rate $2 \times 10^{-5}$, weight decay 0.01, batch size 32, and 3 epochs with early stopping.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Test set performance on IMDb sentiment classification.}
+\label{tab:q1_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Val Acc} & \textbf{Test Acc} & \textbf{Test Macro-F1} \\
+\midrule
+TF-IDF + Logistic Regression & 0.9064 & 0.8985 & 0.8985 \\
+BiLSTM + GloVe               & 0.8852 & 0.8528 & 0.8526 \\
+DistilBERT (fine-tuned)      & 0.9052 & \textbf{0.9115} & \textbf{0.9115} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+DistilBERT achieves the highest test accuracy (91.15\%) and macro-F1 (0.9115), followed by TF-IDF (89.85\%) and BiLSTM (85.28\%). Notably, TF-IDF outperforms BiLSTM despite being a much simpler model. This is attributable to two factors: (1) TF-IDF with bigrams captures local phrase-level sentiment cues across the full document without truncation, while BiLSTM is limited to 256 tokens; (2) the BiLSTM hidden state bottleneck loses long-range context in lengthy reviews.
+
+\subsection{Misclassification Analysis}
+
+All three models share a common failure mode: reviews with \textit{mixed sentiment}, where the reviewer expresses genuine appreciation for specific elements (acting, atmosphere, nostalgia) while rating the film negatively overall.
+
+Representative error patterns:
+
+\begin{enumerate}
+    \item \textbf{Praise-then-criticize structure}: Reviews that open with positive statements before turning negative (e.g., praising Van Damme films generally before criticizing the specific movie) mislead bag-of-words models.
+    \item \textbf{Irony and hedging}: Phrases like ``guilty pleasure'', ``not too bad'', and ``compared to garbage nowadays this isn't bad'' contain positive surface tokens despite negative intent.
+    \item \textbf{Domain-specific sentiment}: References to beloved cult actors (Hasselhoff, Ida Lupino) trigger positive associations even in negative reviews that use them as partial compensation.
+    \item \textbf{Conditional positivity}: ``The only reason this is not a 1 is the acting'' — a strongly negative review with embedded praise confuses all three models.
+    \item \textbf{Nostalgia framing}: Reviews about childhood favorites use warm language regardless of objective quality assessment.
+\end{enumerate}
+
+DistilBERT makes the fewest errors (2{,}213 vs.\ 2{,}537 for TF-IDF and 3{,}680 for BiLSTM), demonstrating that contextual embeddings better capture negation scope and discourse structure.
+
+\subsection{Discussion}
+
+Sparse TF-IDF representations excel at capturing discriminative n-gram features and scale well to long documents, but lack positional and contextual awareness. Dense GloVe-initialized BiLSTM representations capture sequential dependencies but suffer from the fixed-length hidden state bottleneck and truncation sensitivity. Contextual DistilBERT representations, conditioned on the full token sequence via self-attention, best handle sentiment ambiguity and long-range negation.
+
+In terms of interpretability, TF-IDF coefficients directly indicate which n-grams drive predictions, making it the most transparent model. BiLSTM attention weights provide partial interpretability. DistilBERT is a black box without additional attribution methods.
+
+% -------------------------------------------------------
+\section{Question 2: Named Entity Recognition}
+% Will be filled after Q2 experiments.
+
+% -------------------------------------------------------
+\section{Question 3: Text Summarization}
+% Will be filled after Q3 experiments.
+
+% -------------------------------------------------------
+\section{Question 4: Machine Translation}
+% Will be filled after Q4 experiments.
+
+% -------------------------------------------------------
+\section{Question 5: Language Modeling}
+% Will be filled after Q5 experiments.
+
+% -------------------------------------------------------
+\section{Conclusion}
+% Will be filled after all experiments.
+
+% -------------------------------------------------------
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem{maas2011imdb}
+Maas, A.~L., Daly, R.~E., Pham, P.~T., Huang, D., Ng, A.~Y., and Potts, C. (2011).
+\newblock Learning word vectors for sentiment analysis.
+\newblock In \textit{Proceedings of ACL}, pages 142--150.
+
+\bibitem{pennington2014glove}
+Pennington, J., Socher, R., and Manning, C.~D. (2014).
+\newblock GloVe: Global vectors for word representation.
+\newblock In \textit{Proceedings of EMNLP}, pages 1532--1543.
+
+\bibitem{sanh2019distilbert}
+Sanh, V., Debut, L., Chaumond, J., and Wolf, T. (2019).
+\newblock DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter.
+\newblock \textit{arXiv preprint arXiv:1910.01108}.
+
+\end{thebibliography}
+
+\end{document}
