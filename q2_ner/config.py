@@ -1,0 +1,24 @@
+import os
+
+SEED = 42
+DATASET_NAME = "conll2003"
+
+MAX_LEN = 128
+BATCH_SIZE = 32
+BERT_BATCH_SIZE = 16
+MAX_VOCAB = 30000
+GLOVE_DIM = 100
+
+EPOCHS_BILSTM = 15
+EPOCHS_BERT = 3
+LR_BILSTM = 1e-3
+LR_BERT = 2e-5
+PATIENCE = 3
+GRAD_CLIP = 5.0
+
+GLOVE_PATH = "glove.6B.100d.txt"
+CHECKPOINT_DIR = "checkpoints"
+RESULTS_DIR = "results"
+
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+os.makedirs(RESULTS_DIR, exist_ok=True)
