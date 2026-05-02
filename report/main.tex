@@ -134,7 +134,72 @@ In terms of interpretability, TF-IDF coefficients directly indicate which n-gram
 
 % -------------------------------------------------------
 \section{Question 2: Named Entity Recognition}
-% Will be filled after Q2 experiments.
+
+\subsection{Dataset}
+
+The CoNLL-2003 English NER dataset~\citep{tjong2003conll} contains newswire articles annotated with four entity types: Person (PER), Organization (ORG), Location (LOC), and Miscellaneous (MISC). The dataset provides official train, validation, and test splits containing 14{,}041, 3{,}250, and 3{,}453 sentences respectively. Entities are annotated in BIO (Beginning-Inside-Outside) format, resulting in 9 distinct tags: \texttt{O}, \texttt{B-PER}, \texttt{I-PER}, \texttt{B-ORG}, \texttt{I-ORG}, \texttt{B-LOC}, \texttt{I-LOC}, \texttt{B-MISC}, \texttt{I-MISC}.
+
+\subsection{Preprocessing and BIO Tagging}
+
+Tokens are lowercased for the BiLSTM-CRF model, and a word vocabulary of 30{,}000 tokens is built from the training set. GloVe 100-dimensional embeddings cover 18{,}415 of 21{,}011 vocabulary tokens. Sequences are padded or truncated to a maximum length of 128 tokens, which covers virtually all CoNLL sentences.
+
+For BERT, the \texttt{bert-base-cased} tokenizer is used without lowercasing, since capitalization is a strong NER signal (e.g., ``Apple'' vs.\ ``apple''). Subword tokenization introduces a token alignment challenge: when a word is split into multiple subword tokens, the BIO label is assigned only to the first subword, and the remaining subwords receive a special \texttt{-100} label that is ignored during loss computation. This ensures entity labels remain word-aligned despite subword splitting.
+
+\subsection{Models}
+
+\textbf{BiLSTM-CRF}: A bidirectional LSTM with hidden size 256 is initialized with GloVe 100-dimensional embeddings (trainable). A linear layer maps the BiLSTM output to emission scores, which are decoded by a CRF layer that enforces valid BIO tag transitions. Training uses Adam with learning rate $10^{-3}$, gradient clipping at 5.0, batch size 32, and early stopping with patience 3 on validation F1.
+
+\textbf{BERT for Token Classification}: \texttt{bert-base-cased}~\citep{devlin2019bert} is fine-tuned with a token classification head using the HuggingFace \texttt{Trainer} API. Training uses AdamW with learning rate $2 \times 10^{-5}$, weight decay 0.01, batch size 16, and 3 epochs.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Test set NER performance on CoNLL-2003.}
+\label{tab:q2_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Val F1} & \textbf{Test Precision} & \textbf{Test Recall} & \textbf{Test F1} \\
+\midrule
+BiLSTM-CRF + GloVe   & 0.8816 & 0.8639 & 0.7734 & 0.8161 \\
+BERT (bert-base-cased) & 0.9453 & 0.9050 & 0.9187 & \textbf{0.9118} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Per-entity F1 on CoNLL-2003 test set.}
+\label{tab:q2_entity}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Entity} & \textbf{BiLSTM-CRF} & \textbf{BERT} \\
+\midrule
+LOC  & 0.87 & 0.93 \\
+MISC & 0.75 & 0.79 \\
+ORG  & 0.79 & 0.89 \\
+PER  & 0.81 & 0.96 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+BERT outperforms BiLSTM-CRF by 9.6 F1 points overall (91.2\% vs.\ 81.6\%). The gap is largest for PER (+15 points) and ORG (+10 points), where capitalization and contextual disambiguation are most important. MISC remains the hardest category for both models (BiLSTM-CRF: 0.75, BERT: 0.79) due to its heterogeneous nature, encompassing nationalities, event names, and sports terms.
+
+\subsection{Error Analysis}
+
+Both models share common failure modes:
+
+\begin{enumerate}
+    \item \textbf{Entity type confusion}: ``CHINA'' appears as both LOC and PER depending on context (e.g., soccer team vs.\ country). BiLSTM-CRF predicts LOC in all cases, while BERT occasionally predicts ORG for team references.
+    \item \textbf{Boundary errors}: Multi-token entities such as ``1995 World Cup'' lose their B- prefix token, causing partial span detection. BERT handles these better due to self-attention over the full sentence.
+    \item \textbf{Single-token entities missed}: Short names like ``Bitar'' (a person) are consistently labeled O by BiLSTM-CRF when appearing without surrounding context, while BERT sometimes confuses them with ORG.
+    \item \textbf{MISC ambiguity}: ``Soviet'', ``Asian'', ``Uzbek'' are categorized as MISC in CoNLL but share surface features with LOC and ORG, causing frequent misclassification in both models.
+    \item \textbf{I- without B-}: BiLSTM-CRF occasionally predicts \texttt{I-MISC} without a preceding \texttt{B-MISC} in headline-style tokens, which the CRF layer should prevent but occasionally fails on rare tag sequences.
+\end{enumerate}
+
+\subsection{Discussion}
+
+The CRF layer in BiLSTM-CRF enforces global tag sequence constraints (e.g., \texttt{I-PER} cannot follow \texttt{B-ORG}), which improves over a plain softmax classifier. However, GloVe embeddings are context-independent: ``Washington'' has the same representation whether it refers to a person or a city. BERT's self-attention mechanism captures this ambiguity by conditioning each token's representation on its full sentence context, leading to substantially better entity disambiguation and boundary detection.
 
 % -------------------------------------------------------
 \section{Question 3: Text Summarization}
@@ -165,6 +230,16 @@ Maas, A.~L., Daly, R.~E., Pham, P.~T., Huang, D., Ng, A.~Y., and Potts, C. (2011
 Pennington, J., Socher, R., and Manning, C.~D. (2014).
 \newblock GloVe: Global vectors for word representation.
 \newblock In \textit{Proceedings of EMNLP}, pages 1532--1543.
+
+\bibitem{tjong2003conll}
+Tjong Kim Sang, E.~F. and De Meulder, F. (2003).
+\newblock Introduction to the CoNLL-2003 shared task: Language-independent named entity recognition.
+\newblock In \textit{Proceedings of CoNLL}, pages 142--147.
+
+\bibitem{devlin2019bert}
+Devlin, J., Chang, M.-W., Lee, K., and Toutanova, K. (2019).
+\newblock BERT: Pre-training of deep bidirectional transformers for language understanding.
+\newblock In \textit{Proceedings of NAACL}, pages 4171--4186.
 
 \bibitem{sanh2019distilbert}
 Sanh, V., Debut, L., Chaumond, J., and Wolf, T. (2019).
