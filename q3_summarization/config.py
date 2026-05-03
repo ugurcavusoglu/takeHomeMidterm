@@ -1,0 +1,17 @@
+import os
+
+SEED = 42
+DATASET_NAME = "cnn_dailymail"
+DATASET_VERSION = "3.0.0"
+NUM_SAMPLES = 1000
+
+BART_MODEL = "facebook/bart-large-cnn"
+MAX_INPUT_LEN = 1024
+MAX_SUMMARY_LEN = 128
+MIN_SUMMARY_LEN = 30
+BART_BATCH_SIZE = 8
+
+TEXTRANK_NUM_SENTENCES = 3
+
+RESULTS_DIR = "results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
