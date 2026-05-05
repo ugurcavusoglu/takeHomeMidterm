@@ -171,7 +171,7 @@ BERT (bert-base-cased) & 0.9453 & 0.9050 & 0.9187 & \textbf{0.9118} \\
 \centering
 \caption{Per-entity F1 on CoNLL-2003 test set.}
 \label{tab:q2_entity}
-\begin{tabular}{lcccc}
+\begin{tabular}{lcc}
 \toprule
 \textbf{Entity} & \textbf{BiLSTM-CRF} & \textbf{BERT} \\
 \midrule
@@ -203,7 +203,60 @@ The CRF layer in BiLSTM-CRF enforces global tag sequence constraints (e.g., \tex
 
 % -------------------------------------------------------
 \section{Question 3: Text Summarization}
-% Will be filled after Q3 experiments.
+
+\subsection{Dataset}
+
+The CNN/DailyMail dataset~\citep{hermann2015cnndm} consists of news articles paired with human-written bullet-point summaries. The test split is used for evaluation; 1{,}000 samples are randomly selected (seed 42) to keep inference time manageable. Average article length is 676 words; average reference summary length is 55 words.
+
+\subsection{Models}
+
+\textbf{TextRank (Extractive)}: A graph-based extractive method~\citep{mihalcea2004textrank}. Sentences are represented as TF-IDF vectors; cosine similarity between all sentence pairs forms a weighted graph. PageRank (damping factor 0.85) ranks sentences by centrality, and the top 3 are returned in original order. No model parameters are involved.
+
+\textbf{BART (Abstractive)}: \texttt{facebook/bart-large-cnn}~\citep{lewis2020bart} is a sequence-to-sequence transformer pre-trained on CNN/DailyMail with a denoising objective. Inference uses beam search with 4 beams, minimum output length 30, and maximum output length 128 tokens. The model is used off-the-shelf without fine-tuning.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Summarization metrics on CNN/DailyMail test set (1{,}000 samples).}
+\label{tab:q3_results}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} & \textbf{BLEU} & \textbf{METEOR} & \textbf{BERTScore} \\
+\midrule
+TextRank (Extractive) & 0.3550 & 0.1415 & 0.2317 & 0.0921 & 0.3338 & 0.8637 \\
+BART (Abstractive)    & \textbf{0.4408} & \textbf{0.2127} & \textbf{0.3103} & \textbf{0.1700} & \textbf{0.3911} & \textbf{0.8803} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+BART outperforms TextRank on all six metrics. The largest gap is on ROUGE-2 (+7.1 points), which measures bigram overlap and reflects BART's ability to produce fluent, locally coherent phrases that match reference phrasing. BLEU is low for both models, which is expected for summarization since multiple valid paraphrases exist and BLEU penalizes deviation from the reference surface form.
+
+\subsection{Qualitative Analysis}
+
+Three representative examples reveal characteristic behavior differences:
+
+\begin{enumerate}
+    \item \textbf{Medical marijuana article}: TextRank selects three scattered sentences (``I see this medical marijuana revolution in surprising places'', ``Your medical marijuana questions answered'', ``They want marijuana to be rescheduled'') that lack coherent flow. BART produces a coherent paragraph attributing claims to a named author and citing a specific statistic (53\% favor legalization), demonstrating its ability to synthesize information across paragraphs.
+
+    \item \textbf{Child gang Twitter article}: TextRank produces long verbatim sentences with good lexical overlap but redundant content. BART generates a shorter, more informative summary that includes key facts (3{,}000 followers, Memphis origin) while paraphrasing rather than copying.
+
+    \item \textbf{Chris Christie town hall article}: TextRank captures a fragment of dialogue (``You do know that?'') that is uninformative without context. BART correctly identifies the central event (teacher questioning Christie about ExxonMobil settlement) and names the participants, demonstrating stronger discourse understanding.
+\end{enumerate}
+
+\subsection{Error Analysis}
+
+\begin{enumerate}
+    \item \textbf{TextRank sentence fragmentation}: Short articles with few sentences cause TextRank to return nearly the full text, producing over-long summaries with low density.
+    \item \textbf{TextRank topic drift}: The TF-IDF similarity graph weights frequent terms heavily; in articles with repetitive boilerplate (sports scores, stock updates), TextRank selects template sentences rather than the main event.
+    \item \textbf{BART hallucination}: BART occasionally introduces specific names or statistics not present in the source (e.g., attributing a quote to ``John Sutter'' in the marijuana article, while the actual author is Sanjay Gupta). This is a known failure mode of abstractive models.
+    \item \textbf{BART entity confusion}: In multi-entity articles (e.g., political pieces with several named officials), BART sometimes conflates speakers or misattributes statements.
+    \item \textbf{BLEU insensitivity}: Both models score poorly on BLEU despite producing readable summaries, confirming that BLEU is poorly calibrated for open-ended generation tasks.
+\end{enumerate}
+
+\subsection{Discussion}
+
+Extractive methods like TextRank guarantee factual faithfulness since every token comes from the source, but produce summaries that may lack coherence and miss the article's main point when key information is distributed across multiple passages. Abstractive models like BART generate fluent, concise summaries by paraphrasing and fusing information, at the cost of occasional hallucination. The ROUGE and BERTScore gap (ROUGE-1: +8.6 points, BERTScore: +1.7 points) confirms that abstractive generation better approximates human reference summaries on this dataset.
 
 % -------------------------------------------------------
 \section{Question 4: Machine Translation}
@@ -245,6 +298,21 @@ Devlin, J., Chang, M.-W., Lee, K., and Toutanova, K. (2019).
 Sanh, V., Debut, L., Chaumond, J., and Wolf, T. (2019).
 \newblock DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter.
 \newblock \textit{arXiv preprint arXiv:1910.01108}.
+
+\bibitem{hermann2015cnndm}
+Hermann, K.~M., Kočiský, T., Grefenstette, E., Espeholt, L., Kay, W., Suleyman, M., and Blunsom, P. (2015).
+\newblock Teaching machines to read and comprehend.
+\newblock In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, pages 1693--1701.
+
+\bibitem{mihalcea2004textrank}
+Mihalcea, R. and Tarau, P. (2004).
+\newblock TextRank: Bringing order into texts.
+\newblock In \textit{Proceedings of EMNLP}, pages 404--411.
+
+\bibitem{lewis2020bart}
+Lewis, M., Liu, Y., Goyal, N., Ghazvininejad, M., Mohamed, A., Levy, O., Stoyanov, V., and Zettlemoyer, L. (2020).
+\newblock BART: Denoising sequence-to-sequence pre-training for natural language generation, translation, and comprehension.
+\newblock In \textit{Proceedings of ACL}, pages 7871--7880.
 
 \end{thebibliography}
 
