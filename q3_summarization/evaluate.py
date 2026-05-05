@@ -1,4 +1,5 @@
 import json
+import os
 import nltk
 import numpy as np
 from rouge_score import rouge_scorer
@@ -13,6 +14,7 @@ from config import RESULTS_DIR
 
 nltk.download("wordnet", quiet=True)
 nltk.download("omw-1.4", quiet=True)
+nltk.download("punkt", quiet=True)
 nltk.download("punkt_tab", quiet=True)
 
 
@@ -93,8 +95,14 @@ def main() -> None:
     print("\nRunning TextRank...")
     textrank_preds = run_textrank(articles)
 
-    print("\nRunning BART...")
-    bart_preds = run_bart(articles)
+    bart_cache = f"{RESULTS_DIR}/bart_summaries.json"
+    if os.path.exists(bart_cache):
+        print("\nLoading cached BART summaries...")
+        with open(bart_cache) as f:
+            bart_preds = json.load(f)
+    else:
+        print("\nRunning BART...")
+        bart_preds = run_bart(articles)
 
     textrank_metrics = compute_all_metrics(textrank_preds, references, "TextRank (Extractive)")
     bart_metrics = compute_all_metrics(bart_preds, references, "BART (Abstractive)")
