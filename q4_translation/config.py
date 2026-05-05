@@ -1,0 +1,26 @@
+import os
+
+SEED = 42
+SRC_LANG = "en"
+TGT_LANG = "de"
+
+DATASET_NAME = "bentrevett/multi30k"
+
+MAX_LEN = 128
+BATCH_SIZE = 64
+EPOCHS = 10
+LR = 1e-3
+CLIP = 1.0
+TEACHER_FORCING_RATIO = 0.5
+EARLY_STOPPING_PATIENCE = 3
+
+ENC_EMB_DIM = 256
+DEC_EMB_DIM = 256
+HID_DIM = 512
+DROPOUT = 0.5
+
+MARIAN_MODEL = "Helsinki-NLP/opus-mt-en-de"
+MARIAN_BATCH_SIZE = 32
+
+RESULTS_DIR = "results"
+os.makedirs(RESULTS_DIR, exist_ok=True)

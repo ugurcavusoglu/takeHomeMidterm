@@ -30,6 +30,10 @@ nltk  # includes METEOR via nltk.translate
 networkx==3.3
 numpy==1.26.4
 
+# Machine translation
+torchtext==0.18.0
+sacremoses==0.1.1
+
 # Utilities
 tqdm==4.66.4
 pandas==2.2.2
