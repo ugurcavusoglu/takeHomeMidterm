@@ -1,0 +1,23 @@
+import os
+
+SEED = 42
+
+DATASET_NAME = "wikitext"
+DATASET_VERSION = "wikitext-2-raw-v1"
+
+NGRAM_ORDER = 3
+
+MAX_LEN = 128
+BATCH_SIZE = 32
+EPOCHS = 15
+LR = 1e-3
+EARLY_STOPPING_PATIENCE = 3
+CLIP = 1.0
+
+LSTM_EMB_DIM = 256
+LSTM_HID_DIM = 512
+LSTM_LAYERS = 2
+DROPOUT = 0.5
+
+RESULTS_DIR = "results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
