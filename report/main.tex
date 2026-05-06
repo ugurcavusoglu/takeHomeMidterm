@@ -260,7 +260,60 @@ Extractive methods like TextRank guarantee factual faithfulness since every toke
 
 % -------------------------------------------------------
 \section{Question 4: Machine Translation}
-% Will be filled after Q4 experiments.
+
+\subsection{Dataset}
+
+The Multi30k dataset~\citep{elliott2016multi30k} contains 29{,}000 training, 1{,}014 validation, and 1{,}000 test sentence pairs in English and German, drawn from image captions. Sentences are short (average 13 tokens) and describe visual scenes.
+
+\subsection{Models}
+
+\textbf{Seq2Seq + Bahdanau Attention}: A custom encoder-decoder architecture trained from scratch. The encoder is a bidirectional GRU (hidden size 512, embedding dim 256); the decoder is a unidirectional GRU augmented with additive (Bahdanau) attention~\citep{bahdanau2015attention} over all encoder hidden states. Vocabularies are built from the training set (min frequency 2): source 7{,}704 tokens, target 9{,}597 tokens. Training uses Adam ($lr=10^{-3}$), teacher forcing ratio 0.5, gradient clipping at 1.0, batch size 64, and early stopping with patience 3 on validation loss.
+
+\textbf{MarianMT (Abstractive)}: \texttt{Helsinki-NLP/opus-mt-en-de}~\citep{tiedemann2020opus} is a pretrained Marian NMT model fine-tuned on millions of parallel sentences. Inference-only, batch size 32, max length 128.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Translation metrics on Multi30k test set (1{,}000 sentence pairs, EN$\rightarrow$DE).}
+\label{tab:q4_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{BLEU} & \textbf{METEOR} & \textbf{ChrF} & \textbf{BERTScore} \\
+\midrule
+Seq2Seq + Bahdanau Attention & 0.0154 & 0.3827 & 0.3453 & 0.6687 \\
+MarianMT (opus-mt-en-de)     & \textbf{0.3625} & \textbf{0.6668} & \textbf{0.6428} & \textbf{0.8967} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+MarianMT dominates on all metrics. The BLEU gap is dramatic (0.36 vs.\ 0.015), reflecting that the Seq2Seq model trained from scratch on only 29{,}000 sentence pairs cannot learn reliable translation. MarianMT's METEOR (0.667) and BERTScore (0.897) confirm high-quality, semantically faithful translations.
+
+\subsection{Qualitative Analysis}
+
+Three test examples reveal the behavioral gap:
+
+\begin{enumerate}
+    \item \textbf{Simple caption}: For ``A man in an orange hat starring at something,'' MarianMT produces a near-perfect translation. Seq2Seq generates a repetitive, incoherent output (``ein orangefarbenen hut auf einem orangefarbenen hut''), repeating n-grams without terminating properly.
+
+    \item \textbf{Compound noun}: ``Boston Terrier running on lush green grass in front of a white fence'' — MarianMT correctly translates ``lush green grass'' as ``üppig grünem Gras.'' Seq2Seq produces a fragmented repetition of ``grünes gras'' and introduces the unrelated word ``auto,'' indicating vocabulary confusion.
+
+    \item \textbf{Domain-specific term}: ``Karate uniform breaking a stick with a front kick'' — MarianMT handles the compound ``front kick'' as ``Front-Kick'' (a reasonable borrowing). Seq2Seq produces \texttt{<unk>} tokens for rare words like ``karate'' and ``kick,'' showing OOV sensitivity.
+\end{enumerate}
+
+\subsection{Error Analysis}
+
+\begin{enumerate}
+    \item \textbf{Seq2Seq repetition}: The model frequently enters repetition loops, generating the same phrase multiple times before hitting \texttt{max\_len}. This is a known GRU decoder failure mode when attention weights collapse to a single position.
+    \item \textbf{Seq2Seq OOV}: Rare words (``karate'', ``terrier'', ``kick'') map to \texttt{<unk>}, degrading BLEU severely. Character-level or BPE tokenization would mitigate this.
+    \item \textbf{Seq2Seq low BLEU vs.\ reasonable METEOR}: METEOR (0.383) is substantially higher than BLEU (0.015) for Seq2Seq. METEOR uses stemming and synonym matching, so partially correct words still score; BLEU requires exact n-gram matches and penalizes length mismatch.
+    \item \textbf{MarianMT false friends}: MarianMT occasionally uses English loanwords in German output (``Front-Kick'') instead of native German equivalents. This is acceptable but reflects training corpus bias toward technical and informal text.
+    \item \textbf{Data scale mismatch}: Seq2Seq is trained on 29{,}000 pairs; MarianMT was pre-trained on tens of millions. The comparison is intentionally asymmetric — its purpose is to demonstrate the effect of pre-training scale on translation quality.
+\end{enumerate}
+
+\subsection{Discussion}
+
+The results confirm the central lesson of neural machine translation: data scale and pre-training are decisive. A Seq2Seq model with Bahdanau attention is architecturally sound (it introduced the attention mechanism that inspired Transformers), but requires far more data than Multi30k to produce fluent translations. MarianMT's BLEU of 0.36 on Multi30k matches published baselines for strong supervised models on this benchmark. The Seq2Seq model does learn some structure — its METEOR of 0.38 shows partial lexical correctness — but cannot generalize to the full vocabulary or produce grammatically coherent output without much more training data.
 
 % -------------------------------------------------------
 \section{Question 5: Language Modeling}
@@ -313,6 +366,21 @@ Mihalcea, R. and Tarau, P. (2004).
 Lewis, M., Liu, Y., Goyal, N., Ghazvininejad, M., Mohamed, A., Levy, O., Stoyanov, V., and Zettlemoyer, L. (2020).
 \newblock BART: Denoising sequence-to-sequence pre-training for natural language generation, translation, and comprehension.
 \newblock In \textit{Proceedings of ACL}, pages 7871--7880.
+
+\bibitem{elliott2016multi30k}
+Elliott, D., Frank, S., Sima'an, K., and Specia, L. (2016).
+\newblock Multi30K: Multilingual English-German image descriptions.
+\newblock In \textit{Proceedings of the 5th Workshop on Vision and Language}, pages 70--74.
+
+\bibitem{bahdanau2015attention}
+Bahdanau, D., Cho, K., and Bengio, Y. (2015).
+\newblock Neural machine translation by jointly learning to align and translate.
+\newblock In \textit{Proceedings of ICLR}.
+
+\bibitem{tiedemann2020opus}
+Tiedemann, J. and Thottingal, S. (2020).
+\newblock OPUS-MT -- Building open translation services for the World.
+\newblock In \textit{Proceedings of EAMT}.
 
 \end{thebibliography}
 
