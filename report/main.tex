@@ -317,7 +317,64 @@ The results confirm the central lesson of neural machine translation: data scale
 
 % -------------------------------------------------------
 \section{Question 5: Language Modeling}
-% Will be filled after Q5 experiments.
+
+\subsection{Dataset}
+
+WikiText-2~\citep{merity2017wikitext} is a word-level language modeling benchmark derived from verified Wikipedia articles. It contains 2{,}051{,}910 training tokens, 213{,}886 validation tokens, and 241{,}211 test tokens. The vocabulary built from the training set with minimum frequency 2 yields 39{,}275 unique tokens.
+
+\subsection{Models}
+
+\textbf{N-gram LM (Trigram)}: A count-based trigram language model with Laplace (add-1) smoothing. Given context $(w_{i-2}, w_{i-1})$, the probability of $w_i$ is:
+\[
+P(w_i \mid w_{i-2}, w_{i-1}) = \frac{C(w_{i-2}, w_{i-1}, w_i) + 1}{C(w_{i-2}, w_{i-1}) + |V|}
+\]
+where $|V|$ is the vocabulary size. No neural parameters are involved.
+
+\textbf{LSTM LM}: A 2-layer LSTM language model with embedding dimension 256, hidden dimension 512, and dropout 0.5. At each time step the model predicts the next token given all previous tokens in the sequence. Training uses Adam ($lr=10^{-3}$), sequence length 128, batch size 32, gradient clipping at 1.0, and early stopping with patience 3 on validation loss. The best checkpoint (epoch 15, val PPL 199.64) is used for test evaluation.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Language modeling perplexity on WikiText-2 test set.}
+\label{tab:q5_results}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{Val Perplexity} & \textbf{Test Perplexity} \\
+\midrule
+N-gram (trigram, Laplace) & -- & 32{,}372.30 \\
+LSTM (2-layer)            & 199.64 & \textbf{194.33} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The LSTM achieves a test perplexity of 194.33, dramatically outperforming the trigram model (32{,}372.30). The LSTM's perplexity steadily decreased across all 15 epochs, with no early stopping triggered, suggesting the model could benefit from further training.
+
+\subsection{Qualitative Analysis}
+
+Three seed phrases reveal the generation quality of each model:
+
+\begin{enumerate}
+    \item \textbf{Seed ``the president''}: N-gram produces a factually grounded but incoherent continuation (``of dartmouth college, rutgers university — titled `liu kang's dragon fatality'\,''), jumping between unrelated topics. LSTM produces syntactically plausible but semantically empty text (``of alphonse josé secretary of the first concerto''), reflecting its inability to maintain long-range topic coherence.
+
+    \item \textbf{Seed ``in the''}: N-gram generates a locally coherent phrase (``united states on december 11, 1949'') by copying frequent trigrams, but the continuation drifts. LSTM produces fragmented output with rare tokens (``@-@ paced @-@ medical''), which are WikiText-specific tokenization artifacts.
+
+    \item \textbf{Seed ``he was''}: N-gram stays on topic briefly (``pressed to the different conformation'') before drifting. LSTM generates syntactically richer but semantically inconsistent text (``when he left amateur wadham at offices'').
+\end{enumerate}
+
+\subsection{Error Analysis}
+
+\begin{enumerate}
+    \item \textbf{N-gram data sparsity}: Laplace smoothing spreads probability mass uniformly over unseen trigrams, which severely inflates perplexity when most test trigrams are unseen. Kneser-Ney smoothing would reduce this substantially.
+    \item \textbf{N-gram topic drift}: Since the model only conditions on two previous words, it cannot maintain discourse coherence beyond a single phrase.
+    \item \textbf{LSTM repetition and incoherence}: With only 15 epochs of training on 2M tokens, the LSTM learns local syntax but not global topic structure. Perplexity of ~194 is reasonable but far above the state-of-the-art (~65 with transformer-based models).
+    \item \textbf{WikiText tokenization artifacts}: The dataset contains markup-style tokens (``@-@'') from Wikipedia formatting. These appear frequently in LSTM-generated text since they are common in the training distribution.
+    \item \textbf{No \texttt{<unk>} handling in N-gram}: Test tokens unseen during training all trigger the Laplace fallback, contributing heavily to the extreme perplexity of 32{,}372.
+\end{enumerate}
+
+\subsection{Discussion}
+
+The results confirm the fundamental limitation of count-based language models: data sparsity makes them brittle on held-out data, even with smoothing. The LSTM's perplexity of 194 represents a 166$\times$ improvement over the trigram baseline, demonstrating that distributed representations and recurrent state allow the model to generalize far better to unseen token sequences. The LSTM's val/test perplexity gap (199.64 vs.\ 194.33) is small and negative, indicating no overfitting. Further improvements would come from larger hidden dimensions, more epochs, or replacing the LSTM with a Transformer language model.
 
 % -------------------------------------------------------
 \section{Conclusion}
@@ -381,6 +438,11 @@ Bahdanau, D., Cho, K., and Bengio, Y. (2015).
 Tiedemann, J. and Thottingal, S. (2020).
 \newblock OPUS-MT -- Building open translation services for the World.
 \newblock In \textit{Proceedings of EAMT}.
+
+\bibitem{merity2017wikitext}
+Merity, S., Xiong, C., Bradbury, J., and Socher, R. (2017).
+\newblock Pointer sentinel mixture models.
+\newblock In \textit{Proceedings of ICLR}.
 
 \end{thebibliography}
 
