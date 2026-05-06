@@ -378,7 +378,20 @@ The results confirm the fundamental limitation of count-based language models: d
 
 % -------------------------------------------------------
 \section{Conclusion}
-% Will be filled after all experiments.
+
+This report presented experimental results across five NLP tasks, comparing classical, neural, and transformer-based approaches under consistent reproducible conditions.
+
+\textbf{Q1 (Text Classification)}: DistilBERT achieved the highest accuracy (91.15\%), confirming that contextual embeddings outperform both sparse TF-IDF and dense GloVe representations for sentiment analysis. Notably, TF-IDF with bigrams outperformed BiLSTM, demonstrating that simple baselines remain competitive when documents are long and labels depend on global n-gram features.
+
+\textbf{Q2 (NER)}: BERT-base-cased achieved 91.18\% F1 on CoNLL-2003, outperforming BiLSTM-CRF by 9.6 points. Contextual embeddings proved critical for entity disambiguation (e.g., ``Washington'' as person vs.\ location), while the CRF layer in BiLSTM-CRF provided structural constraints but could not overcome the limitations of context-independent GloVe embeddings.
+
+\textbf{Q3 (Summarization)}: BART outperformed TextRank on all six metrics (ROUGE-1: 0.44 vs.\ 0.36, BERTScore: 0.88 vs.\ 0.86). Abstractive generation produces more fluent and informative summaries, at the cost of occasional hallucination. TextRank guarantees factual faithfulness but fails when key information is spread across multiple paragraphs.
+
+\textbf{Q4 (Machine Translation)}: MarianMT achieved a BLEU of 0.36 on Multi30k EN$\rightarrow$DE, while the Seq2Seq model trained from scratch scored only 0.015. The 166$\times$ gap in BLEU confirms that pre-training on large parallel corpora is essential for high-quality neural machine translation. The Seq2Seq model demonstrated expected failure modes: repetition loops and OOV sensitivity.
+
+\textbf{Q5 (Language Modeling)}: The LSTM language model achieved a test perplexity of 194.33, a 166$\times$ improvement over the trigram baseline (32{,}372.30). Count-based models suffer severely from data sparsity on held-out text; neural models generalize far better through distributed representations and recurrent state.
+
+Across all five tasks, a consistent pattern emerges: pre-trained transformer models dominate when sufficient compute is available, but classical and simple neural baselines remain valuable for interpretability and low-resource settings. The comparison between baselines and transformers is itself informative — it quantifies the value of scale, pre-training, and contextual representation, which is the central theme of modern NLP.
 
 % -------------------------------------------------------
 \bibliographystyle{plainnat}
