@@ -281,13 +281,13 @@ The Multi30k dataset~\citep{elliott2016multi30k} contains 29{,}000 training, 1{,
 \toprule
 \textbf{Model} & \textbf{BLEU} & \textbf{METEOR} & \textbf{ChrF} & \textbf{BERTScore} \\
 \midrule
-Seq2Seq + Bahdanau Attention & 0.0154 & 0.3827 & 0.3453 & 0.6687 \\
-MarianMT (opus-mt-en-de)     & \textbf{0.3625} & \textbf{0.6668} & \textbf{0.6428} & \textbf{0.8967} \\
+Seq2Seq + Bahdanau Attention & 1.54 & 0.3827 & 0.3453 & 0.6687 \\
+MarianMT (opus-mt-en-de)     & \textbf{36.25} & \textbf{0.6668} & \textbf{0.6428} & \textbf{0.8967} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-MarianMT dominates on all metrics. The BLEU gap is dramatic (0.36 vs.\ 0.015), reflecting that the Seq2Seq model trained from scratch on only 29{,}000 sentence pairs cannot learn reliable translation. MarianMT's METEOR (0.667) and BERTScore (0.897) confirm high-quality, semantically faithful translations.
+MarianMT dominates on all metrics. The BLEU gap is dramatic (36.25 vs.\ 1.54), reflecting that the Seq2Seq model trained from scratch on only 29{,}000 sentence pairs cannot learn reliable translation. MarianMT's METEOR (0.667) and BERTScore (0.897) confirm high-quality, semantically faithful translations.
 
 \subsection{Qualitative Analysis}
 
@@ -306,14 +306,14 @@ Three test examples reveal the behavioral gap:
 \begin{enumerate}
     \item \textbf{Seq2Seq repetition}: The model frequently enters repetition loops, generating the same phrase multiple times before hitting \texttt{max\_len}. This is a known GRU decoder failure mode when attention weights collapse to a single position.
     \item \textbf{Seq2Seq OOV}: Rare words (``karate'', ``terrier'', ``kick'') map to \texttt{<unk>}, degrading BLEU severely. Character-level or BPE tokenization would mitigate this.
-    \item \textbf{Seq2Seq low BLEU vs.\ reasonable METEOR}: METEOR (0.383) is substantially higher than BLEU (0.015) for Seq2Seq. METEOR uses stemming and synonym matching, so partially correct words still score; BLEU requires exact n-gram matches and penalizes length mismatch.
+    \item \textbf{Seq2Seq low BLEU vs.\ reasonable METEOR}: METEOR (0.383) is substantially higher than BLEU (1.54) for Seq2Seq. METEOR uses stemming and synonym matching, so partially correct words still score; BLEU requires exact n-gram matches and penalizes length mismatch.
     \item \textbf{MarianMT false friends}: MarianMT occasionally uses English loanwords in German output (``Front-Kick'') instead of native German equivalents. This is acceptable but reflects training corpus bias toward technical and informal text.
     \item \textbf{Data scale mismatch}: Seq2Seq is trained on 29{,}000 pairs; MarianMT was pre-trained on tens of millions. The comparison is intentionally asymmetric — its purpose is to demonstrate the effect of pre-training scale on translation quality.
 \end{enumerate}
 
 \subsection{Discussion}
 
-The results confirm the central lesson of neural machine translation: data scale and pre-training are decisive. A Seq2Seq model with Bahdanau attention is architecturally sound (it introduced the attention mechanism that inspired Transformers), but requires far more data than Multi30k to produce fluent translations. MarianMT's BLEU of 0.36 on Multi30k matches published baselines for strong supervised models on this benchmark. The Seq2Seq model does learn some structure — its METEOR of 0.38 shows partial lexical correctness — but cannot generalize to the full vocabulary or produce grammatically coherent output without much more training data.
+The results confirm the central lesson of neural machine translation: data scale and pre-training are decisive. A Seq2Seq model with Bahdanau attention is architecturally sound (it introduced the attention mechanism that inspired Transformers), but requires far more data than Multi30k to produce fluent translations. MarianMT's BLEU of 36.25 on Multi30k matches published baselines for strong supervised models on this benchmark. The Seq2Seq model does learn some structure — its METEOR of 0.38 shows partial lexical correctness — but cannot generalize to the full vocabulary or produce grammatically coherent output without much more training data.
 
 % -------------------------------------------------------
 \section{Question 5: Language Modeling}
@@ -387,7 +387,7 @@ This report presented experimental results across five NLP tasks, comparing clas
 
 \textbf{Q3 (Summarization)}: BART outperformed TextRank on all six metrics (ROUGE-1: 0.44 vs.\ 0.36, BERTScore: 0.88 vs.\ 0.86). Abstractive generation produces more fluent and informative summaries, at the cost of occasional hallucination. TextRank guarantees factual faithfulness but fails when key information is spread across multiple paragraphs.
 
-\textbf{Q4 (Machine Translation)}: MarianMT achieved a BLEU of 0.36 on Multi30k EN$\rightarrow$DE, while the Seq2Seq model trained from scratch scored only 0.015. The 166$\times$ gap in BLEU confirms that pre-training on large parallel corpora is essential for high-quality neural machine translation. The Seq2Seq model demonstrated expected failure modes: repetition loops and OOV sensitivity.
+\textbf{Q4 (Machine Translation)}: MarianMT achieved a BLEU of 36.25 on Multi30k EN$\rightarrow$DE, while the Seq2Seq model trained from scratch scored only 1.54. The large gap in BLEU confirms that pre-training on large parallel corpora is essential for high-quality neural machine translation. The Seq2Seq model demonstrated expected failure modes: repetition loops and OOV sensitivity.
 
 \textbf{Q5 (Language Modeling)}: The LSTM language model achieved a test perplexity of 194.33, a 166$\times$ improvement over the trigram baseline (32{,}372.30). Count-based models suffer severely from data sparsity on held-out text; neural models generalize far better through distributed representations and recurrent state.
 
